@@ -6,6 +6,8 @@ const bodyParser = require('body-parser');
 const sequelize = require('./util/database');
 const Product = require('./models/product');
 const User = require('./models/user');
+const Cart = require('./models/cart');
+const CartItem = require('./models/cart-Item');
 
 const errorController = require('./controllers/error');
 
@@ -28,13 +30,6 @@ app.use((req, res, next) => {
 const adminRoutes = require('./routes/admin');
 const shopRoutes = require('./routes/shop');
 
-// db.execute('SELECT * FROM Products').then((result) => {
-//     console.log(result[0] , result[1]);
-// }).catch(err => {
-//     console.log(err);
-// });
-
-
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -45,6 +40,10 @@ app.use(errorController.get404);
 
 Product.belongsTo(User, { constraints: true, onDelete: 'CASCADE' });
 User.hasMany(Product);
+User.hasOne(Cart);
+Cart.belongsTo(User);
+Cart.belongsToMany(Product , {through:CartItem}); // one cart can hold multiple products
+Product.belongsToMany(Cart, {through:CartItem}); // one product can be in multiple differnent cart
 
 sequelize.sync()
     .then(result => {
@@ -55,9 +54,10 @@ sequelize.sync()
             return User.create({ name: 'arunsks', email: 'test@tester.com' });
         }
         return user;
+    }).then(user => {
+        user.createCart();
     })
-    .then(user => {
-        // console.log(user);
+    .then(cart => {
         app.listen(3000);
     })
     .catch(err => {
